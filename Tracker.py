@@ -29,10 +29,3 @@ edited_df = st.data_editor(df, num_rows="dynamic")
 # Save changes automatically when the table is updated
 if not edited_df.empty:
     edited_df.to_csv(DATA_FILE, index=False)
-
-    # Ensure "Start Date" column is not empty before using idxmax()
-    if edited_df["Start Date"].notna().sum() > 0:
-        most_recent_campaign = edited_df.loc[edited_df["Start Date"].idxmax(), "Campaign Name"]
-        st.markdown(f"Your most recent campaign is **{most_recent_campaign}** 🚀")
-    else:
-        st.warning("Please enter valid Start Dates to determine the most recent campaign.")
