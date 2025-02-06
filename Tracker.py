@@ -18,6 +18,11 @@ if os.path.exists(DATA_FILE):
 else:
     df = pd.DataFrame(columns=columns)
 
+# Ensure correct data types for date columns
+if not df.empty:
+    df["Start Date"] = pd.to_datetime(df["Start Date"], errors="coerce")
+    df["End Date"] = pd.to_datetime(df["End Date"], errors="coerce")
+
 # Display the editable data table
 edited_df = st.data_editor(df, num_rows="dynamic")
 
@@ -25,6 +30,9 @@ edited_df = st.data_editor(df, num_rows="dynamic")
 if not edited_df.empty:
     edited_df.to_csv(DATA_FILE, index=False)
 
-    # Identify the campaign with the latest start date
-    most_recent_campaign = edited_df.loc[edited_df["Start Date"].idxmax()]["Campaign Name"]
-    st.markdown(f"Your most recent campaign is **{most_recent_campaign}** 🚀")
+    # Ensure "Start Date" column is not empty before using idxmax()
+    if edited_df["Start Date"].notna().sum() > 0:
+        most_recent_campaign = edited_df.loc[edited_df["Start Date"].idxmax(), "Campaign Name"]
+        st.markdown(f"Your most recent campaign is **{most_recent_campaign}** 🚀")
+    else:
+        st.warning("Please enter valid Start Dates to determine the most recent campaign.")
