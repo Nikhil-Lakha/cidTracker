@@ -4,6 +4,8 @@ import requests
 import pandas as pd
 import streamlit as st
 
+st.write("Secrets detected:", st.secrets)
+
 st.set_page_config(page_title="CID Tracker", layout="wide")
 st.title("CID Tracker")
 
