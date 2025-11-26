@@ -7,7 +7,9 @@ st.set_page_config(page_title="CID Tracker", layout="wide")
 st.title("CID Tracker")
 
 # --------- Storage settings ---------
-DATA_FILE = "cid_trackers.csv"
+# Always save in the same folder as this script (your repo folder)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, "cid_trackers.csv")
 BASE_CID_NUMBER = 200000
 
 COLUMNS = [
@@ -268,7 +270,7 @@ with tab1:
     with row5_col2:
         target_url = st.text_input("Target URL")
 
-    submitted = st.button("Generate Tracking Link")
+    submitted = st.button("Save Campaign")
 
     tracking_link = ""
     tracking_code = ""
@@ -303,7 +305,7 @@ with tab1:
             url_lower = target_url.strip().lower()
             if not ("vodacom" in url_lower or "vodapay" in url_lower):
                 missing_fields.append(
-                    "Only Vodacom, Vodapay Business and Vodapay website URL's are allowed"
+                    "Target URL (must contain 'vodacom' or 'vodapay')"
                 )
 
         if missing_fields:
@@ -336,7 +338,7 @@ with tab1:
                 "Tracking Link": tracking_link,
             }
 
-            # Append to dataframe and save to CSV
+            # Append to dataframe and save to CSV (in repo folder)
             df_data = pd.concat([df_data, pd.DataFrame([new_row])], ignore_index=True)
             df_data.to_csv(DATA_FILE, index=False)
 
@@ -352,6 +354,8 @@ with tab1:
                     "No Target URL provided, so tracking link could not be generated."
                 )
 
+            st.markdown("### Preview of Saved Data")
+            st.write(new_row)
 
 # -----------------------------------------------
 # TAB 2: TRACKERS
