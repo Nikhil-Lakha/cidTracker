@@ -83,10 +83,6 @@ def push_csv_to_github(csv_path: str, tracking_code: str) -> None:
 
     # 3. PUT to GitHub
     r_put = requests.put(url, headers=headers, json=payload)
-    if r_put.status_code not in (200, 201):
-        st.error(f"GitHub PUT error {r_put.status_code}: {r_put.text}")
-    else:
-        st.success("cid_trackers.csv pushed to GitHub ✅")
 
 
 # ---------------- Channel → Campaign Type ----------------
@@ -301,7 +297,7 @@ with tab1:
     with r5c2:
         target_url = st.text_input("Target URL")
 
-    submitted = st.button("Save Campaign")
+    submitted = st.button("Generate Tracking Code")
 
     if submitted:
         # ----- validation -----
@@ -367,13 +363,11 @@ with tab1:
             # Push CSV to GitHub
             push_csv_to_github(DATA_FILE, tracking_code)
 
-            st.success("Campaign saved ✅")
+            st.success("Tracked Link Generated ✅")
             st.markdown("### Generated Tracking")
             st.write(f"**Tracking Code:** `{tracking_code}`")
             st.code(tracking_link or "", language="text")
 
-            st.markdown("### Preview of Saved Data")
-            st.write(new_row)
 
 with tab2:
     st.markdown("### Trackers")
