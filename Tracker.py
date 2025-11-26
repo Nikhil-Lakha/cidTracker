@@ -1,4 +1,6 @@
 import os
+import base64
+import requests
 import pandas as pd
 import streamlit as st
 
@@ -7,7 +9,6 @@ st.set_page_config(page_title="CID Tracker", layout="wide")
 st.title("CID Tracker")
 
 # --------- Storage settings ---------
-# Always save in the same folder as this script (your repo folder)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "cid_trackers.csv")
 BASE_CID_NUMBER = 200000
@@ -32,6 +33,67 @@ if os.path.exists(DATA_FILE):
     df_data = pd.read_csv(DATA_FILE)
 else:
     df_data = pd.DataFrame(columns=COLUMNS)
+
+# --- GitHub settings ---
+GITHUB_OWNER = "Nikhil-Lakha"
+GITHUB_REPO = "cidTracker"
+GITHUB_BRANCH = "main"
+GITHUB_FILE_PATH = "cid_trackers.csv"
+GITHUB_API_BASE = "https://api.github.com"
+
+
+def push_csv_to_github(csv_path: str, tracking_code: str):
+    """Push the CSV file to GitHub using the contents API."""
+    try:
+        github_token = st.secrets["github"]["token"]
+    except Exception:
+        st.warning("GitHub token not configured in .streamlit/secrets.toml; skipping push.")
+        return
+
+    if not github_token:
+        st.warning("GitHub token is empty; skipping push.")
+        return
+
+    url = f"{GITHUB_API_BASE}/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github+json",
+    }
+
+    # 1. Get existing file (to obtain SHA if it exists)
+    sha = None
+    resp = requests.get(url, headers=headers)
+    if resp.status_code == 200:
+        try:
+            sha = resp.json().get("sha")
+        except Exception:
+            sha = None
+    elif resp.status_code not in (200, 404):
+        st.error(f"GitHub GET error {resp.status_code}: {resp.text}")
+        return
+
+    # 2. Read CSV and encode
+    with open(csv_path, "rb") as f:
+        csv_bytes = f.read()
+    content_b64 = base64.b64encode(csv_bytes).decode("utf-8")
+
+    commit_message = f"Update trackers – {tracking_code}"
+
+    payload = {
+        "message": commit_message,
+        "content": content_b64,
+        "branch": GITHUB_BRANCH,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    # 3. PUT to GitHub
+    put_resp = requests.put(url, headers=headers, json=payload)
+    if put_resp.status_code not in (200, 201):
+        st.error(f"GitHub PUT error {put_resp.status_code}: {put_resp.text}")
+    else:
+        st.success("CSV pushed to GitHub ✅")
+
 
 # --- Tabs ---
 tab1, tab2, tab3 = st.tabs(["Create", "Trackers", "Video Tutorial"])
@@ -341,6 +403,9 @@ with tab1:
             # Append to dataframe and save to CSV (in repo folder)
             df_data = pd.concat([df_data, pd.DataFrame([new_row])], ignore_index=True)
             df_data.to_csv(DATA_FILE, index=False)
+
+            # Push to GitHub
+            push_csv_to_github(DATA_FILE, tracking_code)
 
             st.success("Campaign saved ✅")
 
