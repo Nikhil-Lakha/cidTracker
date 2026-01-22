@@ -23,7 +23,7 @@ COLUMNS = [
     "End Date",
     "Campaign Owner",
     "Target URL",
-    "Tracking Code",
+    "Key",
     "Tracking Link",
 ]
 
@@ -350,7 +350,7 @@ with tab1:
                 "End Date": end_date,
                 "Campaign Owner": campaign_owner,
                 "Target URL": target_url,
-                "Tracking Code": tracking_code,
+                "Key": tracking_code,
                 "Tracking Link": tracking_link,
             }
 
