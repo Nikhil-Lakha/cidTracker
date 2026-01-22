@@ -13,6 +13,7 @@ DATA_FILE = os.path.join(BASE_DIR, "cid_trackers.csv")
 BASE_CID_NUMBER = 200000
 
 COLUMNS = [
+    "Key",
     "Campaign Name",
     "Channel",
     "Campaign Type",
@@ -23,7 +24,6 @@ COLUMNS = [
     "End Date",
     "Campaign Owner",
     "Target URL",
-    "Key",
     "Tracking Link",
 ]
 
@@ -340,6 +340,7 @@ with tab1:
             tracking_link = build_tracking_link(target_url, tracking_code)
 
             new_row = {
+                "Key": tracking_code,
                 "Campaign Name": campaign_name,
                 "Channel": channel,
                 "Campaign Type": campaign_type,
@@ -350,7 +351,6 @@ with tab1:
                 "End Date": end_date,
                 "Campaign Owner": campaign_owner,
                 "Target URL": target_url,
-                "Key": tracking_code,
                 "Tracking Link": tracking_link,
             }
 
