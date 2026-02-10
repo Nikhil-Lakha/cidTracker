@@ -376,4 +376,9 @@ with tab2:
 
 with tab3:
     st.markdown("### Video Tutorial")
-    st.info("A walkthrough video will appear here soon.")
+
+    VIDEO_URL = "https://github.com/Nikhil-Lakha/cidTracker/blob/main/Video%20Tutorial%20CID%20Tracker.mp4"
+
+    st.video(VIDEO_URL)
+    st.caption("CID Tracker walkthrough")
+
