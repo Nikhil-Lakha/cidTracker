@@ -141,6 +141,7 @@ business_product_map = {
         "Trade Advance",
         "Personal Loans",
         "DLS Streamy",
+        "Homeloans",
     ],
     "Insurance": [
         "Device Insurance",
