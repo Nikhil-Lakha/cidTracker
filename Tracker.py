@@ -394,11 +394,29 @@ with tab4:
     elif not os.path.exists(cid_tracker_file):
         st.error("cid_trackers.csv was not found in the project folder.")
     else:
-        # Read files with correct delimiters
-        adobe_df = pd.read_csv(adobe_template_file, sep=";")
+        # Read the Adobe template exactly as-is
+        adobe_df = pd.read_csv(adobe_template_file, sep=";", header=None)
+
+        # Read tracker data
         cid_df = pd.read_csv(cid_tracker_file)
 
-        # Merge (template on top, trackers below)
-        merged_df = pd.concat([adobe_df, cid_df], ignore_index=True)
+        # Build tracker rows to match the Adobe template structure exactly
+        cid_export_df = pd.DataFrame({
+            0: cid_df["Key"],
+            1: cid_df["Campaign Name"],
+            2: cid_df["Channel"],
+            3: cid_df["Campaign Type"],
+            4: cid_df["Campaign Objective"],
+            5: cid_df["Business Unit"],
+            6: cid_df["Business Product"],
+            7: cid_df["Start Date"],
+            8: cid_df["End Date"],
+            9: cid_df["Campaign Owner"],
+            10: cid_df["Target URL"],
+            11: ""  # CID Campaign Link left blank to match your desired output
+        })
+
+        # Merge: template on top, tracker rows underneath
+        merged_df = pd.concat([adobe_df, cid_export_df], ignore_index=True)
 
         st.dataframe(merged_df, use_container_width=True)
