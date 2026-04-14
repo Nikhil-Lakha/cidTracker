@@ -383,3 +383,20 @@ with tab3:
     st.video(VIDEO_URL)
     st.caption("CID Tracker walkthrough")
 
+with tab4:
+    st.markdown("### Adobe Analytics")
+
+    adobe_template_file = os.path.join(BASE_DIR, "Adobe Upload Template.csv")
+    cid_tracker_file = os.path.join(BASE_DIR, "cid_trackers.csv")
+
+    if not os.path.exists(adobe_template_file):
+        st.error("Adobe Upload Template.csv was not found in the project folder.")
+    elif not os.path.exists(cid_tracker_file):
+        st.error("cid_trackers.csv was not found in the project folder.")
+    else:
+        adobe_df = pd.read_csv(adobe_template_file)
+        cid_df = pd.read_csv(cid_tracker_file)
+
+        merged_df = pd.concat([adobe_df, cid_df], ignore_index=True)
+
+        st.dataframe(merged_df, use_container_width=True)
