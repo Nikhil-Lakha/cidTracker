@@ -413,7 +413,7 @@ with tab4:
             8: cid_df["End Date"],
             9: cid_df["Campaign Owner"],
             10: cid_df["Target URL"],
-            11: ""  # CID Campaign Link left blank to match your desired output
+            11: cid_df["Tracking Link"]
         })
 
         # Merge: template on top, tracker rows underneath
