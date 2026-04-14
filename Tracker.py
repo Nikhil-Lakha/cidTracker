@@ -390,33 +390,54 @@ with tab4:
     cid_tracker_file = os.path.join(BASE_DIR, "cid_trackers.csv")
 
     if not os.path.exists(adobe_template_file):
-        st.error("Adobe Upload Template.csv was not found in the project folder.")
+        st.error("Adobe Upload Template.csv was not found.")
     elif not os.path.exists(cid_tracker_file):
-        st.error("cid_trackers.csv was not found in the project folder.")
+        st.error("cid_trackers.csv was not found.")
     else:
-        # Read the Adobe template exactly as-is
-        adobe_df = pd.read_csv(adobe_template_file, sep=";", header=None)
+        # Read template WITHOUT headers
+        adobe_raw = pd.read_csv(adobe_template_file, sep=";", header=None)
 
-        # Read tracker data
+        # Extract first row as header
+        raw_headers = adobe_raw.iloc[0].fillna("").astype(str).tolist()
+
+        # Make headers safe for Streamlit (no duplicates internally)
+        seen = {}
+        headers = []
+        for i, h in enumerate(raw_headers):
+            h_clean = h.strip()
+            if h_clean == "":
+                h_clean = f" " * (i + 1)  # visually blank but unique
+            if h_clean in seen:
+                seen[h_clean] += 1
+                h_clean = f"{h_clean}_{seen[h_clean]}"
+            else:
+                seen[h_clean] = 0
+            headers.append(h_clean)
+
+        # Apply headers to remaining template rows
+        adobe_df = adobe_raw.iloc[1:].copy()
+        adobe_df.columns = headers
+
+        # Load tracker data
         cid_df = pd.read_csv(cid_tracker_file)
 
-        # Build tracker rows to match the Adobe template structure exactly
+        # Map tracker data to Adobe structure
         cid_export_df = pd.DataFrame({
-            0: cid_df["Key"],
-            1: cid_df["Campaign Name"],
-            2: cid_df["Channel"],
-            3: cid_df["Campaign Type"],
-            4: cid_df["Campaign Objective"],
-            5: cid_df["Business Unit"],
-            6: cid_df["Business Product"],
-            7: cid_df["Start Date"],
-            8: cid_df["End Date"],
-            9: cid_df["Campaign Owner"],
-            10: cid_df["Target URL"],
-            11: cid_df["Tracking Link"]
+            headers[0]: cid_df["Key"],
+            headers[1]: cid_df["Campaign Name"],
+            headers[2]: cid_df["Channel"],
+            headers[3]: cid_df["Campaign Type"],
+            headers[4]: cid_df["Campaign Objective"],
+            headers[5]: cid_df["Business Unit"],
+            headers[6]: cid_df["Business Product"],
+            headers[7]: cid_df["Start Date"],
+            headers[8]: cid_df["End Date"],
+            headers[9]: cid_df["Campaign Owner"],
+            headers[10]: cid_df["Target URL"],
+            headers[11]: "cid_df["Tracking Link"]  # leave blank as per your requirement
         })
 
-        # Merge: template on top, tracker rows underneath
+        # Merge template + tracker rows
         merged_df = pd.concat([adobe_df, cid_export_df], ignore_index=True)
 
         st.dataframe(merged_df, use_container_width=True)
