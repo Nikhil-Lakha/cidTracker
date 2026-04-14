@@ -434,7 +434,7 @@ with tab4:
             headers[8]: cid_df["End Date"],
             headers[9]: cid_df["Campaign Owner"],
             headers[10]: cid_df["Target URL"],
-            headers[11]: "cid_df["Tracking Link"]  # leave blank as per your requirement
+            headers[11]: cid_df["Tracking Link"]  # leave blank as per your requirement
         })
 
         # Merge template + tracker rows
