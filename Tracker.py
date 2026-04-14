@@ -224,7 +224,7 @@ def build_tracking_link(target_url: str, cid_value: str) -> str:
 
 
 # ---------------- UI Tabs ----------------
-tab1, tab2, tab3 = st.tabs(["Create", "Trackers", "Video Tutorial"])
+tab1, tab2, tab3, tab4 = st.tabs(["Create", "Trackers", "Video Tutorial", "Adobe Analytics Import"])
 
 with tab1:
     st.markdown("### Enter Campaign Details")
