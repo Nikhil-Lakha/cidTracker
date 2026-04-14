@@ -394,9 +394,11 @@ with tab4:
     elif not os.path.exists(cid_tracker_file):
         st.error("cid_trackers.csv was not found in the project folder.")
     else:
-        adobe_df = pd.read_csv(adobe_template_file)
+        # Read files with correct delimiters
+        adobe_df = pd.read_csv(adobe_template_file, sep=";")
         cid_df = pd.read_csv(cid_tracker_file)
 
+        # Merge (template on top, trackers below)
         merged_df = pd.concat([adobe_df, cid_df], ignore_index=True)
 
         st.dataframe(merged_df, use_container_width=True)
