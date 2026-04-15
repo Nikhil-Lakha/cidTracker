@@ -413,16 +413,71 @@ with tab3:
 with tab4:
     st.markdown("### Adobe Analytics")
 
-    if df_data.empty:
-        st.info("No tracker data available yet.")
-    else:
-        preview_df = build_adobe_export_preview(df_data)
-        st.dataframe(preview_df, use_container_width=True)
+    adobe_template_file = os.path.join(BASE_DIR, "Adobe Upload Template.csv")
+    cid_tracker_file = os.path.join(BASE_DIR, "cid_trackers.csv")
 
-        adobe_bytes = build_adobe_export_bytes(df_data)
+    if not os.path.exists(adobe_template_file):
+        st.error("Adobe Upload Template.csv was not found.")
+    elif not os.path.exists(cid_tracker_file):
+        st.error("cid_trackers.csv was not found.")
+    else:
+        # Read template WITHOUT headers
+        adobe_raw = pd.read_csv(adobe_template_file, sep=";", header=None)
+
+        # Extract first row as header
+        raw_headers = adobe_raw.iloc[0].fillna("").astype(str).tolist()
+
+        # Make headers safe for Streamlit (no duplicates internally)
+        seen = {}
+        headers = []
+        for i, h in enumerate(raw_headers):
+            h_clean = h.strip()
+            if h_clean == "":
+                h_clean = " " * (i + 1)  # visually blank but unique
+            if h_clean in seen:
+                seen[h_clean] += 1
+                h_clean = f"{h_clean}_{seen[h_clean]}"
+            else:
+                seen[h_clean] = 0
+            headers.append(h_clean)
+
+        # Apply headers to remaining template rows
+        adobe_df = adobe_raw.iloc[1:].copy()
+        adobe_df.columns = headers
+
+        # Load tracker data
+        cid_df = pd.read_csv(cid_tracker_file)
+
+        # Map tracker data to Adobe structure
+        cid_export_df = pd.DataFrame({
+            headers[0]: cid_df["Key"],
+            headers[1]: cid_df["Campaign Name"],
+            headers[2]: cid_df["Channel"],
+            headers[3]: cid_df["Campaign Type"],
+            headers[4]: cid_df["Campaign Objective"],
+            headers[5]: cid_df["Business Unit"],
+            headers[6]: cid_df["Business Product"],
+            headers[7]: cid_df["Start Date"],
+            headers[8]: cid_df["End Date"],
+            headers[9]: cid_df["Campaign Owner"],
+            headers[10]: cid_df["Target URL"],
+            headers[11]: cid_df["Tracking Link"]
+        })
+
+        # Merge template + tracker rows
+        merged_df = pd.concat([adobe_df, cid_export_df], ignore_index=True)
+
+        st.dataframe(merged_df, use_container_width=True)
+
+        ftp_bytes = merged_df.to_csv(
+            sep=";",
+            index=False,
+            header=True,
+            encoding="utf-8"
+        ).encode("utf-8")
 
         base_filename = f"adobe_upload_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        filename = f"{base_filename}.txt"
+        filename = f"{base_filename}.csv"
         fin_filename = f"{base_filename}.fin"
 
         col1, col2, col3 = st.columns(3)
@@ -430,14 +485,14 @@ with tab4:
         with col1:
             st.download_button(
                 label="Download Adobe File",
-                data=adobe_bytes,
+                data=ftp_bytes,
                 file_name=filename,
-                mime="text/plain"
+                mime="text/csv"
             )
 
         with col2:
             if st.button("Send to FTP"):
-                ok, message = upload_to_ftp(adobe_bytes, filename)
+                ok, message = upload_to_ftp(ftp_bytes, filename)
                 if ok:
                     st.success(message)
                 else:
@@ -448,6 +503,9 @@ with tab4:
                 fin_bytes = b""
                 ok, message = upload_to_ftp(fin_bytes, fin_filename)
                 if ok:
+                    st.success(f".fin file uploaded successfully: {fin_filename}")
+                else:
+                    st.error(message)
                     st.success(f".fin file uploaded successfully: {fin_filename}")
                 else:
                     st.error(message)
