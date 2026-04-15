@@ -1,5 +1,9 @@
 import os
 import base64
+import datetime as dt
+from io import BytesIO
+from ftplib import FTP
+
 import requests
 import pandas as pd
 import streamlit as st
@@ -27,7 +31,7 @@ COLUMNS = [
     "Tracking Link",
 ]
 
-# Load existing data (for persistence across runs)
+# Load existing data
 if os.path.exists(DATA_FILE):
     df_data = pd.read_csv(DATA_FILE)
 else:
@@ -54,9 +58,8 @@ def push_csv_to_github(csv_path: str, tracking_code: str) -> None:
         "Accept": "application/vnd.github+json",
     }
 
-    # 1. Get existing file SHA (if file already exists)
     sha = None
-    r_get = requests.get(url, headers=headers)
+    r_get = requests.get(url, headers=headers, timeout=30)
     if r_get.status_code == 200:
         try:
             sha = r_get.json().get("sha")
@@ -66,7 +69,6 @@ def push_csv_to_github(csv_path: str, tracking_code: str) -> None:
         st.error(f"GitHub GET error {r_get.status_code}: {r_get.text}")
         return
 
-    # 2. Read CSV and base64 encode it
     with open(csv_path, "rb") as f:
         content_bytes = f.read()
     content_b64 = base64.b64encode(content_bytes).decode("utf-8")
@@ -79,8 +81,38 @@ def push_csv_to_github(csv_path: str, tracking_code: str) -> None:
     if sha:
         payload["sha"] = sha
 
-    # 3. PUT to GitHub
-    r_put = requests.put(url, headers=headers, json=payload)
+    r_put = requests.put(url, headers=headers, json=payload, timeout=30)
+    if r_put.status_code not in (200, 201):
+        st.error(f"GitHub PUT error {r_put.status_code}: {r_put.text}")
+
+
+def upload_to_ftp(file_bytes: bytes, remote_filename: str) -> tuple[bool, str]:
+    ftp_cfg = st.secrets.get("ftp", {})
+
+    host = ftp_cfg.get("host")
+    username = ftp_cfg.get("username")
+    password = ftp_cfg.get("password")
+    port = int(ftp_cfg.get("port", 21))
+    remote_dir = ftp_cfg.get("remote_dir", "")
+
+    if not host or not username or not password:
+        return False, "FTP secrets are not configured."
+
+    try:
+        bio = BytesIO(file_bytes)
+
+        with FTP() as ftp:
+            ftp.connect(host, port, timeout=30)
+            ftp.login(username, password)
+
+            if remote_dir:
+                ftp.cwd(remote_dir)
+
+            ftp.storbinary(f"STOR {remote_filename}", bio)
+
+        return True, f"Uploaded to FTP: {remote_filename}"
+    except Exception as e:
+        return False, f"FTP upload failed: {e}"
 
 
 # ---------------- Channel → Campaign Type ----------------
@@ -224,7 +256,9 @@ def build_tracking_link(target_url: str, cid_value: str) -> str:
 
 
 # ---------------- UI Tabs ----------------
-tab1, tab2, tab3, tab4 = st.tabs(["Create", "Trackers", "Video Tutorial", "Adobe Analytics Import"])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Create", "Trackers", "Video Tutorial", "Adobe Analytics"]
+)
 
 with tab1:
     st.markdown("### Enter Campaign Details")
@@ -254,12 +288,11 @@ with tab1:
     with r1c2:
         channel = st.selectbox("Channel", channel_options, index=0)
 
-    # Campaign Type depends on channel
+    # Row 2
     campaign_type_options = [""]
     if channel in campaign_type_map:
         campaign_type_options += campaign_type_map[channel]
 
-    # Row 2
     r2c1, r2c2 = st.columns(2)
     with r2c1:
         campaign_type = st.selectbox("Campaign Type", campaign_type_options, index=0)
@@ -299,7 +332,6 @@ with tab1:
     submitted = st.button("Generate Tracking Code")
 
     if submitted:
-        # ----- validation -----
         missing = []
 
         if not campaign_name.strip():
@@ -334,7 +366,6 @@ with tab1:
                 + "• " + "\n• ".join(missing)
             )
         else:
-            # ----- Generate CID + link -----
             next_number = BASE_CID_NUMBER + len(df_data)
             channel_code = get_channel_code(channel)
             tracking_code = f"{channel_code}_{next_number}"
@@ -355,18 +386,15 @@ with tab1:
                 "Tracking Link": tracking_link,
             }
 
-            # Update local CSV
             df_data = pd.concat([df_data, pd.DataFrame([new_row])], ignore_index=True)
             df_data.to_csv(DATA_FILE, index=False)
 
-            # Push CSV to GitHub
             push_csv_to_github(DATA_FILE, tracking_code)
 
             st.success("Tracked Link Generated ✅")
             st.markdown("### Generated Tracking")
             st.write(f"**Tracking Code:** `{tracking_code}`")
             st.code(tracking_link or "", language="text")
-
 
 with tab2:
     st.markdown("### Trackers")
@@ -378,9 +406,8 @@ with tab2:
 with tab3:
     st.markdown("### Video Tutorial")
 
-    VIDEO_URL = "https://raw.githubusercontent.com/Nikhil-Lakha/cidTracker/main/Video%20Tutorial%20CID%20Tracker.mp4"
-
-    st.video(VIDEO_URL)
+    video_url = "https://raw.githubusercontent.com/Nikhil-Lakha/cidTracker/main/Video%20Tutorial%20CID%20Tracker.mp4"
+    st.video(video_url)
     st.caption("CID Tracker walkthrough")
 
 with tab4:
@@ -394,19 +421,16 @@ with tab4:
     elif not os.path.exists(cid_tracker_file):
         st.error("cid_trackers.csv was not found.")
     else:
-        # Read template WITHOUT headers
         adobe_raw = pd.read_csv(adobe_template_file, sep=";", header=None)
 
-        # Extract first row as header
         raw_headers = adobe_raw.iloc[0].fillna("").astype(str).tolist()
 
-        # Make headers safe for Streamlit (no duplicates internally)
         seen = {}
         headers = []
         for i, h in enumerate(raw_headers):
             h_clean = h.strip()
             if h_clean == "":
-                h_clean = f" " * (i + 1)  # visually blank but unique
+                h_clean = " " * (i + 1)
             if h_clean in seen:
                 seen[h_clean] += 1
                 h_clean = f"{h_clean}_{seen[h_clean]}"
@@ -414,14 +438,11 @@ with tab4:
                 seen[h_clean] = 0
             headers.append(h_clean)
 
-        # Apply headers to remaining template rows
         adobe_df = adobe_raw.iloc[1:].copy()
         adobe_df.columns = headers
 
-        # Load tracker data
         cid_df = pd.read_csv(cid_tracker_file)
 
-        # Map tracker data to Adobe structure
         cid_export_df = pd.DataFrame({
             headers[0]: cid_df["Key"],
             headers[1]: cid_df["Campaign Name"],
@@ -434,10 +455,36 @@ with tab4:
             headers[8]: cid_df["End Date"],
             headers[9]: cid_df["Campaign Owner"],
             headers[10]: cid_df["Target URL"],
-            headers[11]: cid_df["Tracking Link"]  # leave blank as per your requirement
+            headers[11]: cid_df["Tracking Link"]
         })
 
-        # Merge template + tracker rows
         merged_df = pd.concat([adobe_df, cid_export_df], ignore_index=True)
 
         st.dataframe(merged_df, use_container_width=True)
+
+        ftp_bytes = merged_df.to_csv(
+            sep=";",
+            index=False,
+            header=True,
+            encoding="utf-8"
+        ).encode("utf-8")
+
+        filename = f"adobe_upload_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.download_button(
+                label="Download Adobe File",
+                data=ftp_bytes,
+                file_name=filename,
+                mime="text/csv"
+            )
+
+        with col2:
+            if st.button("Send to FTP"):
+                ok, message = upload_to_ftp(ftp_bytes, filename)
+                if ok:
+                    st.success(message)
+                else:
+                    st.error(message)
