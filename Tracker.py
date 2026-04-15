@@ -476,7 +476,7 @@ with tab4:
             encoding="utf-8"
         ).encode("utf-8")
 
-        base_filename = f"adobe_upload_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        base_filename = f"adobe_upload_{dt.datetime.now().strftime('%Y%m%d')}"
         filename = f"{base_filename}.csv"
         fin_filename = f"{base_filename}.fin"
 
