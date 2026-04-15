@@ -507,5 +507,3 @@ with tab4:
                 else:
                     st.error(message)
                     st.success(f".fin file uploaded successfully: {fin_filename}")
-                else:
-                    st.error(message)
