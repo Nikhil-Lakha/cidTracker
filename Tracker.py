@@ -132,7 +132,7 @@ campaign_type_map = {
     "eBill": ["Banner", "Email", "SMS", "MMS"],
     "Email": ["Email Banner", "Email CTA", "In-Page links"],
     "Magazine": ["Product CTA", "Service CTA"],
-    "Mobile": ["Rich Media", "SMS", "USSD", "Push Notifications"],
+    "Mobile": ["Rich Media", "SMS", "USSD", "Push Notifications", "Whatsapp"],
     "Affilliates": ["Banner", "Email", "MMS", "SMS", "Social", "QR"],
     "Paid Search": ["Google Search", "Google Shopping", "Text Ads"],
     "Social Media": [
